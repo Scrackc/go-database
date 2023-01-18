@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 )
 
@@ -19,7 +20,7 @@ func NewPGDB() {
 	// Singleton solo se va a ejeuctar una vez aun que se llame muchas veces
 	once.Do(func() {
 		var err error
-		db, err = sql.Open("postgres", "postgres://postgres:postgresPassword@localhost:5432/go-db?sslmode=disable")
+		db, err = sql.Open("mysql", "postgres://postgres:postgresPassword@localhost:5432/go-db?sslmode=disable")
 		if err != nil {
 			// panic(err)
 			log.Fatalf("No se puede conectar a la base de datos: %v", err)
@@ -30,6 +31,23 @@ func NewPGDB() {
 			// panic(err)
 		}
 		fmt.Println("Conectado a PG")
+	})
+}
+func NewMySqlDB() {
+	// Singleton solo se va a ejeuctar una vez aun que se llame muchas veces
+	once.Do(func() {
+		var err error
+		db, err = sql.Open("mysql", "root:postgresPassword@/go-db?parseTime=true")
+		if err != nil {
+			// panic(err)
+			log.Fatalf("No se puede conectar a la base de datos: %v", err)
+		}
+		// defer db.Close()
+		if err = db.Ping(); err != nil {
+			log.Fatalf("No se pudo comprobar la conexión a la base de datos: %v", err)
+			// panic(err)
+		}
+		fmt.Println("Conectado a MYSQL")
 	})
 }
 

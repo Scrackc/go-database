@@ -7,40 +7,35 @@ import (
 	"github.com/Scrackc/go-database/pkg/product"
 )
 
-type scanner interface {
-	Scan(dest ...interface{}) error
-}
-
 const (
-	psqlMigrateProduct = `CREATE TABLE IF NOT EXISTS products(
-		id SERIAL NOT NULL,
+	mysqlMigrateProduct = `CREATE TABLE IF NOT EXISTS products(
+		id INT AUTO_INCREMENT NOT NULL PRIMARY KEY,
 		name VARCHAR(25) NOT NULL,
 		observations VARCHAR(100),
 		price INT NOT NULL,
 		created_at TIMESTAMP NOT NULL DEFAULT now(),
-		updated_at TIMESTAMP,
-		CONSTRAINT products_id_pk PRIMARY KEY (id)
+		updated_at TIMESTAMP
 	)`
-	psqlCreateProduct  = `INSERT INTO products (name, observations, price, created_at) VALUES ($1, $2, $3, $4) RETURNING id`
-	psqlGetAllProducts = `SELECT id, name, observations, price, created_at, updated_at FROM products`
-	psqlGetProductById = psqlGetAllProducts + " WHERE id = $1"
-	psqlUpdateProduct  = `UPDATE products SET name = $1, observations = $2, price = $3, updated_at = $4 WHERE id = $5`
-	psqlDeleteProduct  = `DELETE FROM products WHERE id = $1`
+	mysqlCreateProduct  = `INSERT INTO products (name, observations, price, created_at) VALUES (?, ?, ?, ?)`
+	mysqlGetAllProducts = `SELECT id, name, observations, price, created_at, updated_at FROM products`
+	mysqlGetProductById = mysqlGetAllProducts + " WHERE id = ?"
+	mysqlUpdateProduct  = `UPDATE products SET name = ?, observations = ?, price = ?, updated_at = ? WHERE id = ?`
+	mysqlDeleteProduct  = `DELETE FROM products WHERE id = ?`
 )
 
-// PSQLProduct usado par atrabajar con PG y el paquete product
-type PSQLProduct struct {
+// MySQLProduct usado par atrabajar con MYSQL y el paquete product
+type MySQLProduct struct {
 	db *sql.DB
 }
 
-// NewPsqlProduct Retorna un nuevo puntero de PSQLProduct
-func NewPsqlProduct(db *sql.DB) *PSQLProduct {
-	return &PSQLProduct{db}
+// NewMySQLProduct Retorna un nuevo puntero de MySQLProduct
+func NewMySQLProduct(db *sql.DB) *MySQLProduct {
+	return &MySQLProduct{db}
 }
 
 // Migrate implemneta la interfaz product.Storage
-func (p *PSQLProduct) Migrate() error {
-	stmt, err := p.db.Prepare(psqlMigrateProduct)
+func (p *MySQLProduct) Migrate() error {
+	stmt, err := p.db.Prepare(mysqlMigrateProduct)
 	if err != nil {
 		return err
 	}
@@ -55,24 +50,30 @@ func (p *PSQLProduct) Migrate() error {
 }
 
 // Create implemneta la interfaz product.Storage
-func (p *PSQLProduct) Create(m *product.Model) error {
-	stmt, err := p.db.Prepare(psqlCreateProduct)
+func (p *MySQLProduct) Create(m *product.Model) error {
+	stmt, err := p.db.Prepare(mysqlCreateProduct)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
-	err = stmt.QueryRow(m.Name, stringToNull(m.Observations), m.Price, m.CreatedAt).Scan(&m.ID)
+	result, err := stmt.Exec(m.Name, stringToNull(m.Observations), m.Price, m.CreatedAt)
 	if err != nil {
 		return err
 	}
-	fmt.Println("Se creo el producto correctamente")
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return err
+	}
+	m.ID = uint(id)
+	fmt.Println("Se creo el producto correctamente con id: ", id)
 	return nil
 }
 
 // GetAll implemneta la interfaz product.Storage
-func (p *PSQLProduct) GetAll() (product.Models, error) {
-	stmt, err := p.db.Prepare(psqlGetAllProducts)
+func (p *MySQLProduct) GetAll() (product.Models, error) {
+	stmt, err := p.db.Prepare(mysqlGetAllProducts)
 	if err != nil {
 		return nil, err
 	}
@@ -84,6 +85,7 @@ func (p *PSQLProduct) GetAll() (product.Models, error) {
 	}
 	defer rows.Close()
 	ms := make(product.Models, 0)
+	fmt.Println("AQUI")
 	for rows.Next() {
 		m, err := scanRowProduct(rows)
 		if err != nil {
@@ -98,8 +100,8 @@ func (p *PSQLProduct) GetAll() (product.Models, error) {
 }
 
 // GetByID implemneta la interfaz product.Storage
-func (p *PSQLProduct) GetByID(id uint) (*product.Model, error) {
-	stmt, err := p.db.Prepare(psqlGetProductById)
+func (p *MySQLProduct) GetByID(id uint) (*product.Model, error) {
+	stmt, err := p.db.Prepare(mysqlGetProductById)
 	if err != nil {
 		return nil, err
 	}
@@ -109,8 +111,8 @@ func (p *PSQLProduct) GetByID(id uint) (*product.Model, error) {
 }
 
 // Upate implemneta la interfaz product.Storage
-func (p *PSQLProduct) Update(m *product.Model) error {
-	stmt, err := p.db.Prepare(psqlUpdateProduct)
+func (p *MySQLProduct) Update(m *product.Model) error {
+	stmt, err := p.db.Prepare(mysqlUpdateProduct)
 	if err != nil {
 		return err
 	}
@@ -138,8 +140,8 @@ func (p *PSQLProduct) Update(m *product.Model) error {
 }
 
 // Delete implemneta la interfaz product.Storage
-func (p *PSQLProduct) Delete(id uint) error {
-	stmt, err := p.db.Prepare(psqlDeleteProduct)
+func (p *MySQLProduct) Delete(id uint) error {
+	stmt, err := p.db.Prepare(mysqlDeleteProduct)
 	if err != nil {
 		return err
 	}
@@ -158,20 +160,4 @@ func (p *PSQLProduct) Delete(id uint) error {
 	}
 	fmt.Println("Se elimino el producto")
 	return nil
-}
-
-func scanRowProduct(s scanner) (*product.Model, error) {
-	m := &product.Model{}
-	observationsNul := sql.NullString{}
-	updatedAtNul := sql.NullTime{}
-	err := s.Scan(
-		&m.ID, &m.Name, &observationsNul, &m.Price, &m.CreatedAt, &updatedAtNul,
-	)
-	if err != nil {
-		return nil, err
-	}
-	m.Observations = observationsNul.String
-	m.UpdatedAt = updatedAtNul.Time
-
-	return m, nil
 }

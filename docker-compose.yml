@@ -1,7 +1,7 @@
 version: '3'
 
 services:
-  db:
+  db-pg:
     image: postgres:14.3
     ports:
       - 5432:5432
@@ -11,4 +11,21 @@ services:
     restart: always
     container_name: db-pg
     volumes:
-      - ./postgres:/var/lib/postgresql/data
+      - postgres-go-crud:/var/lib/postgresql/data
+  db-mysql:
+    image: mysql:8.0.32
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    restart: always
+    container_name: db-mysql
+    volumes:
+      - mysql-go-crud:/var/lib/mysql
+  
+volumes:
+  postgres-go-crud:
+    external: false
+  mysql-go-crud:
+    external: false
