@@ -28,18 +28,18 @@ const (
 	psqlDeleteProduct  = `DELETE FROM products WHERE id = $1`
 )
 
-// PSQLProduct usado par atrabajar con PG y el paquete product
-type PSQLProduct struct {
+// psqlProduct usado par atrabajar con PG y el paquete product
+type psqlProduct struct {
 	db *sql.DB
 }
 
-// NewPsqlProduct Retorna un nuevo puntero de PSQLProduct
-func NewPsqlProduct(db *sql.DB) *PSQLProduct {
-	return &PSQLProduct{db}
+// newPsqlProduct Retorna un nuevo puntero de PSQLProduct
+func newPsqlProduct(db *sql.DB) *psqlProduct {
+	return &psqlProduct{db}
 }
 
 // Migrate implemneta la interfaz product.Storage
-func (p *PSQLProduct) Migrate() error {
+func (p *psqlProduct) Migrate() error {
 	stmt, err := p.db.Prepare(psqlMigrateProduct)
 	if err != nil {
 		return err
@@ -55,7 +55,7 @@ func (p *PSQLProduct) Migrate() error {
 }
 
 // Create implemneta la interfaz product.Storage
-func (p *PSQLProduct) Create(m *product.Model) error {
+func (p *psqlProduct) Create(m *product.Model) error {
 	stmt, err := p.db.Prepare(psqlCreateProduct)
 	if err != nil {
 		return err
@@ -71,7 +71,7 @@ func (p *PSQLProduct) Create(m *product.Model) error {
 }
 
 // GetAll implemneta la interfaz product.Storage
-func (p *PSQLProduct) GetAll() (product.Models, error) {
+func (p *psqlProduct) GetAll() (product.Models, error) {
 	stmt, err := p.db.Prepare(psqlGetAllProducts)
 	if err != nil {
 		return nil, err
@@ -98,7 +98,7 @@ func (p *PSQLProduct) GetAll() (product.Models, error) {
 }
 
 // GetByID implemneta la interfaz product.Storage
-func (p *PSQLProduct) GetByID(id uint) (*product.Model, error) {
+func (p *psqlProduct) GetByID(id uint) (*product.Model, error) {
 	stmt, err := p.db.Prepare(psqlGetProductById)
 	if err != nil {
 		return nil, err
@@ -109,7 +109,7 @@ func (p *PSQLProduct) GetByID(id uint) (*product.Model, error) {
 }
 
 // Upate implemneta la interfaz product.Storage
-func (p *PSQLProduct) Update(m *product.Model) error {
+func (p *psqlProduct) Update(m *product.Model) error {
 	stmt, err := p.db.Prepare(psqlUpdateProduct)
 	if err != nil {
 		return err
@@ -138,7 +138,7 @@ func (p *PSQLProduct) Update(m *product.Model) error {
 }
 
 // Delete implemneta la interfaz product.Storage
-func (p *PSQLProduct) Delete(id uint) error {
+func (p *psqlProduct) Delete(id uint) error {
 	stmt, err := p.db.Prepare(psqlDeleteProduct)
 	if err != nil {
 		return err
@@ -158,20 +158,4 @@ func (p *PSQLProduct) Delete(id uint) error {
 	}
 	fmt.Println("Se elimino el producto")
 	return nil
-}
-
-func scanRowProduct(s scanner) (*product.Model, error) {
-	m := &product.Model{}
-	observationsNul := sql.NullString{}
-	updatedAtNul := sql.NullTime{}
-	err := s.Scan(
-		&m.ID, &m.Name, &observationsNul, &m.Price, &m.CreatedAt, &updatedAtNul,
-	)
-	if err != nil {
-		return nil, err
-	}
-	m.Observations = observationsNul.String
-	m.UpdatedAt = updatedAtNul.Time
-
-	return m, nil
 }
