@@ -3,10 +3,11 @@ package main
 import (
 	"log"
 
-	"github.com/Scrackc/go-pg-database/pkg/invoiceheader"
-	"github.com/Scrackc/go-pg-database/pkg/invoiceitem"
-	"github.com/Scrackc/go-pg-database/pkg/product"
-	"github.com/Scrackc/go-pg-database/storage"
+	"github.com/Scrackc/go-database/pkg/invoice"
+	"github.com/Scrackc/go-database/pkg/invoiceheader"
+	"github.com/Scrackc/go-database/pkg/invoiceitem"
+	"github.com/Scrackc/go-database/pkg/product"
+	"github.com/Scrackc/go-database/storage"
 )
 
 func main() {
@@ -14,8 +15,8 @@ func main() {
 	migateDB()
 	storage.NewPGDB()
 
-	storageProduct := storage.NewPsqlProduct(storage.Pool())
-	serviceProduct := product.NewService(storageProduct)
+	// storageProduct := storage.NewPsqlProduct(storage.Pool())
+	// serviceProduct := product.NewService(storageProduct)
 	// * Crear un nuevo registro
 	// m := &product.Model{
 	// 	Name:         "Curso de db con GO",
@@ -54,9 +55,26 @@ func main() {
 	// 	log.Fatalf("product.Update: %v", err)
 	// }
 	// * Para eliminar un producto
-	err := serviceProduct.Delete(2)
-	if err != nil {
-		log.Fatalf("product.delete: %v", err)
+	// err := serviceProduct.Delete(2)
+	// if err != nil {
+	// 	log.Fatalf("product.delete: %v", err)
+	// }
+	// * Para crear factura
+	storageHeader := storage.NewPSQLInvoiceHeader(storage.Pool())
+	storageItems := storage.NewPSQLInvoiceItem(storage.Pool())
+	storageInvoice := storage.NewPsqlInvoice(storage.Pool(), storageHeader, storageItems)
+	m := &invoice.Model{
+		Header: &invoiceheader.Model{
+			Client: "Eduardo",
+		},
+		Items: invoiceitem.Models{
+			&invoiceitem.Model{ProductId: 1},
+			&invoiceitem.Model{ProductId: 99},
+		},
+	}
+	serviceInvoice := invoice.NewService(storageInvoice)
+	if err := serviceInvoice.Create(m); err != nil {
+		log.Fatalf("invoice.Create: %v", err)
 	}
 
 }

@@ -3,6 +3,8 @@ package storage
 import (
 	"database/sql"
 	"fmt"
+
+	"github.com/Scrackc/go-database/pkg/invoiceheader"
 )
 
 const (
@@ -13,6 +15,7 @@ const (
 		updated_at TIMESTAMP,
 		CONSTRAINT invoice_headers_id_pk PRIMARY KEY (id)
 	)`
+	psqlCreateInvoiceHeader = `INSERT INTO invoice_headers(client) VALUES ($1) RETURNING id, created_at`
 )
 
 // PSQLInvoiceHeader usado par atrabajar con PG y el paquete invoiceheader
@@ -39,4 +42,13 @@ func (p *PSQLInvoiceHeader) Migrate() error {
 	}
 	fmt.Println("Migracion de invoiceheader ejecutada correctamente")
 	return nil
+}
+
+func (p *PSQLInvoiceHeader) CreateTX(tx *sql.Tx, m *invoiceheader.Model) error {
+	stmt, err := tx.Prepare(psqlCreateInvoiceHeader)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	return stmt.QueryRow(m.Client).Scan(&m.ID, &m.CreatedAt)
 }

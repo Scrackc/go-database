@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/Scrackc/go-pg-database/pkg/product"
+	"github.com/Scrackc/go-database/pkg/product"
 )
 
 type scanner interface {
